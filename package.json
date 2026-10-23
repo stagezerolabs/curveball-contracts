@@ -1,0 +1,15 @@
+{
+  "name": "@curveball/contracts",
+  "private": true,
+  "packageManager": "pnpm@10.28.2",
+  "scripts": {
+    "compile": "forge build",
+    "test": "forge test",
+    "test:fork": "make test-fork-strict"
+  },
+  "devDependencies": {
+    "@openzeppelin/contracts": "5.1.0",
+    "forge-std": "github:foundry-rs/forge-std#v1.17.0",
+    "solady": "0.1.26"
+  }
+}

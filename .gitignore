@@ -1,0 +1,41 @@
+# Dependencies
+/node_modules/
+
+# Compiler and generated output
+/out/
+/cache/
+/broadcast/
+/artifacts/
+/typechain-types/
+
+# Security-tool output
+/crytic-export/
+/echidna-v2-corpus/
+/coverage/
+lcov.info
+coverage.json
+
+# Local service state
+/.netlify/
+
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.keystore
+
+# Logs and temporary files
+*.log
+*.trace
+*.dump
+*.tmp
+*.bak
+
+# Editor and operating-system state
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
