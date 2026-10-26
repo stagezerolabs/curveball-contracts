@@ -267,8 +267,9 @@ Effects and checks, in order:
 8. Transfer only `realQuote` WETH—the existing synced quote remains in the pool—and transfer `tokensToPool`.
 9. Mint LP directly to the locker.
 10. Re-read reserves and require exact equality with `tokensToPool` and `quoteInPool`; otherwise `MintMismatch`.
-11. Burn the launchpad's entire remaining market-token balance.
-12. Register token/pool with the locker and emit `Graduated`.
+11. Record the pool's current observation count in the escrow (`markGraduated`) as the buyback TWAP zero point.
+12. Burn the launchpad's entire remaining market-token balance.
+13. Register token/pool with the locker and emit `Graduated`.
 
 Unsynced WETH is skimmed to launchpad surplus. Synced WETH is matched at the closing price while inventory permits; excess beyond the available token buffer raises the pool's opening quote-per-token price and is not recovered through graduation. Existing LP or synced market-token reserve is rejected.
 
@@ -353,10 +354,16 @@ Misuse conditions revert:
 Environmental readiness is handled as a non-reverting skip:
 
 1. Call pool `sync`.
-2. Require `observationLength > 3`; otherwise `FewObservations`.
+2. Require that both windows the TWAP call will sample were recorded after this market's
+   graduation, using the observation count stored by `markGraduated`; otherwise `FewObservations`.
+   Icarus appends observations and never rewrites history, so `observationLength − 1 − TWAP_WINDOWS`
+   (the earliest sampled observation) must be at least the graduation count. This keeps zeroed
+   observations that can accumulate in a pre-created, pre-synced empty pool out of every TWAP
+   sample. A market never marked by the launchpad fails closed.
 3. Compute nominal input as 25% of balance, or all of it if that rounds to zero.
 4. Cap input to 0.25% of the orientation-correct quote reserve.
-5. Request two-window fee-free TWAP output; catch failure as `QuoteFailed`.
+5. Request two-window fee-free TWAP output; catch failure as `QuoteFailed`. Output zero also skips
+   as `FewObservations`: an empty reference is never a price to buy against.
 6. If factory is paused, skip as `PoolPaused` before transferring quote.
 7. Compute:
 

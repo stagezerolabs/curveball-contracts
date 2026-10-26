@@ -313,6 +313,9 @@ contract CurveLaunchpad is ICurveLaunchpad, Ownable2Step, ReentrancyGuard {
         IIcarusPool(pool).mint(locker);
         (tokenReserve, quoteReserve) = _reserves(pool, token);
         if (tokenReserve != tokensToPool || quoteReserve != quoteInPool) revert MintMismatch();
+        // The escrow's buyback TWAP must never sample the empty observations that can accumulate in
+        // a pre-created pool before seeding; mark this pool's observation count as the zero point.
+        ICurveFeeEscrow(escrow).markGraduated(token, pool);
 
         uint256 burned = IERC20(token).balanceOf(address(this));
         CurveToken(token).burn(burned);

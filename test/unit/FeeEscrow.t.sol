@@ -135,6 +135,10 @@ contract FeeEscrowTest is Test {
         weth.mint(address(pool), 10 ether);
         pool.mint(address(this));
         launchpad.setPool(address(token), address(pool));
+        // The launchpad records the pool's observation count at graduation; the mock launchpad
+        // does not, so mark it here like the real `graduate` flow does.
+        vm.prank(address(launchpad));
+        escrow.markGraduated(address(token), address(pool));
         for (uint256 i = 0; i < observationWindows; i++) {
             vm.warp(block.timestamp + 1801);
             pool.sync();
@@ -245,6 +249,26 @@ contract FeeEscrowTest is Test {
 
     function test_buyback_skipsWithTooFewObservations() public {
         _graduate(2, 4 ether);
+        _expectSkip(CurveFeeEscrow.SkipReason.FewObservations);
+    }
+
+    /// @dev Fail-closed: a pool reachable through the launchpad but never recorded at graduation
+    ///      (miswired singleton) must never be priced against, even after observations mature.
+    function test_buyback_failsClosedWhenGraduationWasNotMarked() public {
+        launchpad.unlock(token);
+        pool = MockIcarusPool(factory.createPool(address(token), address(weth), false));
+        launchpad.send(token, address(pool), 160_000 ether);
+        weth.mint(address(pool), 10 ether);
+        pool.mint(address(this));
+        launchpad.setPool(address(token), address(pool));
+        for (uint256 i = 0; i < 3; i++) {
+            vm.warp(block.timestamp + 1801);
+            pool.sync();
+        }
+        assertGt(pool.observationLength(), 3);
+        assertEq(escrow.seedObservations(address(token)), 0, "the mock launchpad does not graduate");
+
+        _distribute(4 ether, 0);
         _expectSkip(CurveFeeEscrow.SkipReason.FewObservations);
     }
 

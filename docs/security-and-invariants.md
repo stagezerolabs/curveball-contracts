@@ -163,7 +163,8 @@ The absence of guards on locker and reserve is coupled to the trusted pool and t
 | Trader oversells | Checked `held` subtraction or quote-reserve validation reverts | Trade and math tests |
 | Market remains sold out without graduation | Abort available after seven days; next sell aborts inline | Abort tests |
 | Guardian pauses | Launch and buy revert; sell and lifecycle exits continue | Admin/trade/abort tests |
-| Third party creates empty pool | Graduation reuses it | Graduation tests |
+| Third party creates empty pool | Graduation reuses it; the stored graduation observation count keeps its empty observations out of every buyback TWAP | Graduation and escrow TWAP regression tests |
+| Pre-created pool with zeroed TWAP observations | First buybacks skip until two live observation windows exist; credit and interval preserved | Escrow TWAP regression tests |
 | Unsynced pool donation | Skimmed before seeding | Graduation/rescue tests |
 | Synced WETH donation | Matched at closing price while buffer permits; excess raises opening quote-per-token price and is not recovered through graduation | Unit and fork graduation tests |
 | Pool has existing LP | Graduation reverts `PoolUsed` | Graduation tests |

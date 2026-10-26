@@ -41,6 +41,10 @@ contract CurveFeeEscrow is ICurveFeeEscrow, Ownable2Step, ReentrancyGuard {
     /// @notice Quote reserved for buying back `token`.
     mapping(address token => uint256) public buybackBalance;
     mapping(address token => uint256) public lastBuyback;
+    /// @notice The market pool's observation count recorded at graduation. Observations are
+    ///         append-only, so any observation at or above this index was pushed over seeded
+    ///         (live) reserves; buybacks refuse to price against anything before it.
+    mapping(address token => uint256) public seedObservations;
     mapping(address asset => uint256) public totalOwed;
 
     event FeeAccrued(
@@ -120,9 +124,10 @@ contract CurveFeeEscrow is ICurveFeeEscrow, Ownable2Step, ReentrancyGuard {
 
         // Brings an idle pool's observations up to date, so the TWAP absorbs the previous buyback.
         pool.sync();
-        // quote() underflows unless there are more observations than windows. One extra window keeps
-        // observation 0 out: on a pool created before graduation it averages in empty reserves.
-        if (pool.observationLength() <= TWAP_WINDOWS + 1) return _skip(token, SkipReason.FewObservations);
+        // Both windows `quote` samples must have been recorded after graduation: a pre-created
+        // empty pool synced before graduation stacks zeroed cumulative prices and would void the
+        // slippage band for the first buybacks. Unmarked pools fail closed.
+        if (!_observationsReady(pool, token)) return _skip(token, SkipReason.FewObservations);
         bool tokenIsToken0 = pool.token0() == token;
         uint256 amountIn = _chunk(pool, tokenIsToken0, balance);
         uint256 twapOut;
@@ -131,6 +136,9 @@ contract CurveFeeEscrow is ICurveFeeEscrow, Ownable2Step, ReentrancyGuard {
         } catch {
             return _skip(token, SkipReason.QuoteFailed);
         }
+        // Defense in depth: a live pool can legitimately return zero for a dust input; an empty
+        // reference is never a price to buy against.
+        if (twapOut == 0) return _skip(token, SkipReason.FewObservations);
         // Checked before any transfer: a swap reverting after the quote is in the pool would leave it skimmable.
         if (icarusFactory.isPaused()) return _skip(token, SkipReason.PoolPaused);
 
@@ -152,6 +160,16 @@ contract CurveFeeEscrow is ICurveFeeEscrow, Ownable2Step, ReentrancyGuard {
         emit BuybackBurned(token, amountIn, burned);
     }
 
+    /// @notice Records `pool`'s observation count at graduation, the zero point past which every
+    ///         observation is guaranteed to have been pushed over seeded reserves.
+    /// @dev Only the launchpad may call this, inside `graduate` after the seed mint. A pool
+    ///      pre-created and synced before graduation can already hold zeroed observations; counting
+    ///      them here keeps them out of every future TWAP sample.
+    function markGraduated(address token, address pool) external {
+        if (msg.sender != launchpad) revert Unauthorized();
+        seedObservations[token] = IIcarusPool(pool).observationLength();
+    }
+
     /// @notice Sends `asset` the escrow holds beyond its liabilities.
     function rescue(address asset, address to, uint256 amount) external onlyOwner nonReentrant {
         if (amount > IERC20(asset).balanceOf(address(this)) - totalOwed[asset]) revert ExceedsSurplus();
@@ -161,6 +179,20 @@ contract CurveFeeEscrow is ICurveFeeEscrow, Ownable2Step, ReentrancyGuard {
 
     function renounceOwnership() public pure override {
         revert RenounceDisabled();
+    }
+
+    /// @dev True only when both windows `quote(tokenIn, amountIn, TWAP_WINDOWS)` will sample were
+    ///      recorded after this market's graduation. Icarus appends one observation per elapsed
+    ///      30-minute period and never rewrites history, so `observationLength` at graduation is a
+    ///      reliable zero point: anything at or above it was pushed over seeded reserves.
+    function _observationsReady(IIcarusPool pool, address token) internal view returns (bool) {
+        uint256 seedObs = seedObservations[token];
+        if (seedObs == 0) return false;
+        uint256 obsLength = pool.observationLength();
+        // quote() uses the last `TWAP_WINDOWS` windows, i.e. observations [obsLength-1-TWAP_WINDOWS ..
+        // obsLength-1]. Exiting early also keeps the subtraction below safe.
+        if (obsLength <= TWAP_WINDOWS + 1) return false;
+        return obsLength - 1 - TWAP_WINDOWS >= seedObs;
     }
 
     function _chunk(IIcarusPool pool, bool tokenIsToken0, uint256 balance) internal view returns (uint256 amountIn) {
