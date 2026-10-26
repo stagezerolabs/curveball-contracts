@@ -304,7 +304,13 @@ The function emits `Rescued`; transfer behavior remains subject to the asset con
 - The implementation constructor binds immutable `launchpad = msg.sender` and seals implementation storage.
 - A clone may initialize exactly once, only through the bound launchpad.
 - Initialization validates name and symbol byte lengths and mints exactly `supply`: `reserveAmount` to the reserve recipient and the remainder to launchpad.
-- Before unlock, only minting and transfers with the launchpad as sender or recipient are allowed. Holder-to-holder transfers, holder burns, reserve transfers, and allowance/permit-based transfers between non-launchpad addresses revert `Locked`.
+- Before unlock, only minting and transfers in which the launchpad is the sender, or a transfer to
+  the launchpad in which the launchpad is the caller, are allowed; all other transfers revert
+  `Locked`. That is: buys, sell settlement (the launchpad calls `transferFrom`), and graduation
+  burns keep moving, while holder-to-holder transfers, holder burns, reserve transfers, and any
+  allowance/permit-based transfer between non-launchpad addresses — including a holder sending
+  tokens directly to the launchpad itself — revert. This prevents curve tokens from being stranded
+  in the launchpad of a locked market, where they would later be burned with the graduation buffer.
 - `unlock` is launchpad-only and irreversible.
 - After unlock, standard transfers and holder burns are enabled.
 - Permit2 automatic infinite allowance is disabled.

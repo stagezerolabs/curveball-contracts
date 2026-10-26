@@ -229,9 +229,16 @@ contract Handler is Test {
         address actor = _holder(actorSeed, token);
         uint256 amount = IERC20(token).balanceOf(actor) * bound(bps, 1, 2_000) / 10_000;
         if (amount == 0) return;
+        bool graduated = ghosts[token].state == CurveLaunchpad.State.Graduated;
+        // The launchpad is the only counterparty that can receive a holder's curve tokens before
+        // graduation (sell settlement); a direct donation can only land after the token is unlocked.
         vm.prank(actor);
-        IERC20(token).transfer(address(launchpad), amount);
-        if (ghosts[token].state == CurveLaunchpad.State.Graduated) donatedAfterGraduation[token] += amount;
+        try IERC20(token).transfer(address(launchpad), amount) {
+            if (!graduated) _violate("curve token reached the launchpad before graduation");
+            donatedAfterGraduation[token] += amount;
+        } catch {
+            if (graduated) _violate("graduated token donation to the launchpad reverted");
+        }
         reached[Action.DonateToken]++;
     }
 

@@ -75,7 +75,14 @@ contract CurveToken is ERC20 {
     }
 
     function _beforeTokenTransfer(address from, address to, uint256) internal view override {
-        if (unlocked || from == address(0) || from == launchpad || to == launchpad) return;
+        // During lock the launchpad is the only counterparty that can receive tokens from a holder
+        // (sell settlement), so manual sends to its address are also reverted: they could otherwise
+        // be stranded in a locked market and burned with the graduation buffer. `msg.sender` is the
+        // launchpad exactly when the protocol itself moves the tokens (sell transferFrom, buys,
+        // graduation burn); the holder calling transfer/transferFrom directly cannot pass.
+        if (unlocked || from == address(0) || from == launchpad || (to == launchpad && msg.sender == launchpad)) {
+            return;
+        }
         revert Locked();
     }
 
