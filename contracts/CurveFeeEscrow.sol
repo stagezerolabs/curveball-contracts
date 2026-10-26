@@ -170,6 +170,13 @@ contract CurveFeeEscrow is ICurveFeeEscrow, Ownable2Step, ReentrancyGuard {
         seedObservations[token] = IIcarusPool(pool).observationLength();
     }
 
+    /// @notice Quote credited to `token`'s buyback that is locked because the market has not
+    ///         graduated (Trading, Ready, or Aborted-without-re-graduation) and therefore has no
+    ///         pool to buy back from. Exposure for holders trackers and rescue accounting.
+    function lockedBuyback(address token) external view returns (uint256) {
+        return ICurveLaunchpad(launchpad).poolOf(token) == address(0) ? buybackBalance[token] : 0;
+    }
+
     /// @notice Sends `asset` the escrow holds beyond its liabilities.
     function rescue(address asset, address to, uint256 amount) external onlyOwner nonReentrant {
         if (amount > IERC20(asset).balanceOf(address(this)) - totalOwed[asset]) revert ExceedsSurplus();

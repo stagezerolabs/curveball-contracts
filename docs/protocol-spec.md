@@ -384,6 +384,8 @@ On success, set `lastBuyback`, reduce market buyback credit and quote liability,
 
 Skip paths emit `BuybackSkipped`, return zero, preserve credit, and do not advance the interval. Only TWAP `quote` is caught; failures in `sync`, orientation/reserve reads, fee lookup, spot quote, transfers, or swap revert atomically.
 
+Buyback credit of a market that never graduates (no pool, `NotGraduated`) has no spend path and stays in the escrow as a backed liability; `lockedBuyback(token)` reports it.
+
 ### Escrow rescue and ownership
 
 The owner may rescue only `balance − totalOwed` for an asset. The function is nonreentrant and emits `Rescued`. Ownership is two-step and cannot be renounced.

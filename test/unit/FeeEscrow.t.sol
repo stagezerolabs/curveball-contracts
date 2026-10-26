@@ -168,6 +168,15 @@ contract FeeEscrowTest is Test {
         escrow.buyback(address(token));
     }
 
+    /// @dev The buyback credit of a never-graduated market is locked; the view makes it readable
+    ///      for holders trackers and rescue accounting.
+    function test_lockedBuyback_readsTheNeverGraduatedBalance() public {
+        _distribute(4 ether, 0);
+        assertEq(escrow.lockedBuyback(address(token)), 0.8 ether, "pre-graduation buyback credit is locked");
+        _graduate(3, 0);
+        assertEq(escrow.lockedBuyback(address(token)), 0, "after graduation it is spendable via buyback");
+    }
+
     function test_buyback_spendsAChunk_andBurnsTheOutput() public {
         _graduate(3, 0.2 ether);
         uint256 expectedOut = pool.getAmountOut(0.01 ether, address(weth));
