@@ -6,19 +6,21 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {CurveLaunchpad} from "../../contracts/CurveLaunchpad.sol";
 import {CurveToken} from "../../contracts/CurveToken.sol";
 import {CurveMath} from "../../contracts/libraries/CurveMath.sol";
+import {MockWETH} from "../mocks/MockWETH.sol";
 
 contract LaunchpadAdminTest is Test {
     address owner = makeAddr("owner");
     address guardian = makeAddr("guardian");
     address stranger = makeAddr("stranger");
 
+    MockWETH weth = new MockWETH();
     CurveLaunchpad launchpad;
 
     function _config() internal returns (CurveLaunchpad.Config memory c) {
         c.owner = owner;
         c.guardian = guardian;
         c.treasury = makeAddr("treasury");
-        c.quoteToken = makeAddr("weth");
+        c.quoteToken = address(weth);
         c.icarusFactory = makeAddr("icarus");
         c.escrow = makeAddr("escrow");
         c.locker = makeAddr("locker");

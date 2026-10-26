@@ -5,7 +5,7 @@ This document specifies the observable behavior of the current contracts. “Mus
 ## Conventions
 
 - `BPS = 10,000`.
-- Token and quote amounts are integer base units. Production parameters use `ether` units because RISE WETH and the launched tokens use 18 decimals.
+- Token and quote amounts are integer base units. Production parameters use `ether` units because RISE WETH and the launched tokens use 18 decimals, and the launchpad constructor rejects any quote token whose `decimals()` is not 18.
 - `S` is total token supply, `C` is curve supply, `vT` and `vQ` are virtual token and quote reserves, and `k = vT × vQ`.
 - Integer division rounds down unless `ceil` or `ceilDiv` is stated.
 - Transfers use `SafeERC20` except for internal mint/burn operations.

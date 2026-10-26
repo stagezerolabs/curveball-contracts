@@ -4,6 +4,7 @@ pragma solidity 0.8.24;
 import {Ownable, Ownable2Step} from "@openzeppelin/contracts/access/Ownable2Step.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -173,6 +174,10 @@ contract CurveLaunchpad is ICurveLaunchpad, Ownable2Step, ReentrancyGuard {
                 || config.escrow == address(0) || config.locker == address(0) || config.reserve == address(0)
                 || config.launchFee > MAX_LAUNCH_FEE
         ) revert InvalidConfig();
+        // Curve trading math is scale-invariant, but the quote-denominated constants and defaults
+        // (MIN_TARGET, MAX_LAUNCH_FEE, graduation target, launch fee) are tuned for 18 decimals.
+        // Fail fast rather than deploy a curve whose fixed quote bounds are off by orders of magnitude.
+        if (IERC20Metadata(config.quoteToken).decimals() != 18) revert InvalidConfig();
         treasury = config.treasury;
         quoteToken = config.quoteToken;
         icarusFactory = config.icarusFactory;
