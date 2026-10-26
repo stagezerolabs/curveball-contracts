@@ -167,7 +167,7 @@ The absence of guards on locker and reserve is coupled to the trusted pool and t
 | Pre-created pool with zeroed TWAP observations | First buybacks skip until two live observation windows exist; credit and interval preserved | Escrow TWAP regression tests |
 | Quote token with non-18 decimals | Deployment reverts `InvalidConfig` | Deploy unit test |
 | Curve token mis-sent to the launchpad while locked | Reverts `Locked`: only the launchpad itself (buys, sell settlement, graduation) can move tokens to its address, so tokens cannot be stranded and burned with the graduation buffer | Token transfer-lock regression tests |
-| Aborted market never graduates again | Holder-reserve tokens and the buyback share of its quote fees stay locked (system cannot tell temporary abort from permanent failure) | Rescue/claim tests, by design |
+| Aborted market never graduates again | Holder-reserve tokens stay locked (system cannot tell temporary abort from permanent failure) and are readable via `lockedReserveOf` | Rescue/claim tests, by design |
 | Unsynced pool donation | Skimmed before seeding | Graduation/rescue tests |
 | Synced WETH donation | Matched at closing price while buffer permits; excess raises opening quote-per-token price and is not recovered through graduation | Unit and fork graduation tests |
 | Pool has existing LP | Graduation reverts `PoolUsed` | Graduation tests |

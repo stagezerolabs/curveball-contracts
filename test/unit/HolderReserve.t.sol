@@ -57,6 +57,12 @@ contract HolderReserveTest is Test {
         reserve.claim(address(token));
     }
 
+    function test_lockedReserve_readsTheNeverGraduatedBalance() public {
+        assertEq(reserve.lockedReserveOf(address(token)), RESERVE, "pre-graduation reserve is locked");
+        _graduate();
+        assertEq(reserve.lockedReserveOf(address(token)), 0, "after graduation it is claimable instead");
+    }
+
     function test_claim_paysProRataOnce() public {
         launchpad.setHeld(address(token), alice, CURVE / 4);
         _graduate();

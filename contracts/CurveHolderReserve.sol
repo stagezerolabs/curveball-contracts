@@ -48,6 +48,13 @@ contract CurveHolderReserve is ICurveHolderReserve {
         return reserveOf[token] * launchpad.held(token, account) / launchpad.curveSupply();
     }
 
+    /// @notice Reserve tokens currently locked because the market has not graduated (Trading,
+    ///         Ready, or Aborted-without-re-graduation). Exposure for holders trackers: a large
+    ///         balance here is future claim backing, not live liquidity.
+    function lockedReserveOf(address token) external view returns (uint256) {
+        return launchpad.poolOf(token) == address(0) ? reserveOf[token] : 0;
+    }
+
     function claim(address token) external returns (uint256 amount) {
         if (launchpad.poolOf(token) == address(0)) revert NotGraduated();
         if (claimed[token][msg.sender]) revert AlreadyClaimed();

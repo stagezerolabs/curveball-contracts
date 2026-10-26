@@ -415,7 +415,9 @@ Correct asset attribution relies on the trusted factory returning the canonical 
 
 - `claim` is for `msg.sender`, once, and rejects zero entitlement.
 - Claim status is set before transfer.
-- Round-down dust, unclaimed balances, and never-graduated market reserves have no rescue path and remain in the module by design.
+- Round-down dust, unclaimed balances, and never-graduated market reserves have no rescue path and
+  remain in the module by design. `lockedReserveOf(token)` reports the amount that is locked because
+  the market has not graduated, so tracking wallets can distinguish claim backing from live liquidity.
 
 ## State and pause matrix
 
